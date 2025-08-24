@@ -1,0 +1,128 @@
+{
+  "name": "AI Date Detection",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        720
+      ],
+      "id": "dfafb41c-8274-4b30-bef9-3226b1e8ecb8",
+      "name": "Azure OpenAI Chat Model",
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "N2hGYx9mLeYl34Jd",
+          "name": "Azure Open AI account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-07/schema#\",\n  \"title\": \"DateIdentificationResult\",\n  \"type\": \"object\",\n  \"required\": [\"date_columns\", \"combine_logic\", \"format\"],\n  \"properties\": {\n    \"date_columns\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"minItems\": 1,\n      \"description\": \"List of column names that together represent the date.\"\n    },\n    \"combine_logic\": {\n      \"type\": \"string\",\n      \"description\": \"Logic used to combine the columns into a single date. Use 'NA' if no combination is needed. Can contain templates like '{day}-{month}-{year}' or keywords like 'ISO week to date'.\"\n    },\n    \"format\": {\n      \"type\": \"string\",\n      \"description\": \"Standard date format representation using tokens like dd, mm, yyyy, MMM, etc.\"\n    }\n  },\n  \"additionalProperties\": false\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        192,
+        720
+      ],
+      "id": "e424691f-7c8c-4f69-bf07-644a42a9d1b4",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=CSV Data:\n {{ $json.csv }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Here’s a **comprehensive system prompt** for the **AI Data Analyst Assistant**, now enhanced to support a broader range of date formats, including week numbers, timestamps, ordinal dates, and more.\n\n---\n\n### ✅ System Prompt: **Data Analyst Assistant – Date Column Detection & Parsing Logic**\n\nYou are a **Data Analyst Assistant**.\nYou will be given a **sample of structured tabular data (e.g., CSV content)**.\nYour job is to identify:\n\n1. The column(s) that represent **date-related information**.\n2. The **logic** to combine them if needed.\n3. The **correct date format** using international standard patterns.\n4. Use the same separator as of the data, in the output format.\n\n---\n\n### 🔍 Your Task:\n\nExtract a structured JSON output describing the **date representation** in the input.\n\nReturn this structure:\n\n```json\n{\n  \"date_columns\": [<list of column names>],\n  \"combine_logic\": \"<logic to combine or transform the columns, or 'NA' if already a valid date column>\",\n  \"format\": \"<format string representing the final standardized date representation>\"\n}\n```\n\n---\n\n### 🧠 Format Patterns to Recognize:\n\nUse standard format tokens (inspired by `strftime` and ISO standards):\n\n| Token       | Meaning                           |\n| ----------- | --------------------------------- |\n| `dd`        | Day (2-digit)                     |\n| `d`         | Day (1 or 2-digit)                |\n| `mm`        | Month (2-digit)                   |\n| `m`         | Month (1 or 2-digit)              |\n| `MMM`       | Month (3-letter abbreviation)     |\n| `MMMM`      | Full month name                   |\n| `yyyy`      | 4-digit year                      |\n| `yy`        | 2-digit year                      |\n| `HH`        | Hour (24-hour, 2-digit)           |\n| `MM`        | Minute (2-digit)                  |\n| `SS`        | Second (2-digit)                  |\n| `W`         | ISO Week number                   |\n| `D`         | ISO Day of week (1=Mon, 7=Sun)    |\n| `ddd`       | Day name abbreviation (e.g., Mon) |\n| `timestamp` | Raw Unix or ISO timestamp         |\n| `ordinal`   | Ordinal day of year (001–366)     |\n\n---\n\n### 📦 Column Types to Recognize:\n\n* **Explicit date formats**: e.g., `\"date\"`, `\"created_at\"`, `\"order_date\"`\n* **Split components**: e.g., `\"day\"`, `\"month\"`, `\"year\"`\n* **Week-based dates**: e.g., `\"week\"`, `\"year\"`\n* **Ordinal dates**: e.g., `\"day_of_year\"`\n* **Timestamps**: Unix time, ISO strings, datetime fields\n* **Day/Month names**: `Monday`, `January`, etc.\n* **Partial dates**: `month + year`, or `day + month`\n\n---\n\n### 🛠 Rules:\n\n* Combine columns only when necessary.\n* Infer the format string based on both header names and value patterns.\n* If the date is not in a standard form, describe how to derive it.\n* For week-based or ordinal dates, mention the implied standard (e.g., ISO week).\n* If values are ambiguous, choose the **most likely interpretation** based on naming and structure.\n\n---\n\n### ✅ Output Format (Example):\n\n```json\n{\n  \"date_columns\": [\"day\", \"month\", \"year\"],\n  \"combine_logic\": \"{day}-{month}-{year}\",\n  \"format\": \"dd-MMM-yyyy\"\n}\n```\n\n---\n\n### 🧪 Examples\n\n\\<example\\_1>\n**CSV Data**:\n\n```\nid | name | day | month | year | revenue  \n1  | sda  | 02  | Jan   | 2025 | 200.02\n```\n\n**Assistant Response**:\n\n```json\n{\n  \"date_columns\": [\"day\", \"month\", \"year\"],\n  \"combine_logic\": \"{day}-{month}-{year}\",\n  \"format\": \"dd-MMM-yyyy\"\n}\n```\n\n\\</example\\_1>\n\n\\<example\\_2>\n**CSV Data**:\n\n```\nid | name | date | revenue  \n1  | sda  | 02/01/2025 | 200.02\n```\n\n**Assistant Response**:\n\n```json\n{\n  \"date_columns\": [\"date\"],\n  \"combine_logic\": \"NA\",\n  \"format\": \"dd/mm/yyyy\"\n}\n```\n\n\\</example\\_2>\n\n\\<example\\_3>\n**CSV Data**:\n\n```\nevent | week | year | participants  \nxmas  | 52   | 2024 | 300\n```\n\n**Assistant Response**:\n\n```json\n{\n  \"date_columns\": [\"week\", \"year\"],\n  \"combine_logic\": \"ISO week to date\",\n  \"format\": \"W-yyyy\"\n}\n```\n\n\\</example\\_3>\n\n\\<example\\_4>\n**CSV Data**:\n\n```\nid | name | timestamp | revenue  \n1  | sda  | 2025-01-02T15:30:45Z | 200.02\n```\n\n**Assistant Response**:\n\n```json\n{\n  \"date_columns\": [\"timestamp\"],\n  \"combine_logic\": \"NA\",\n  \"format\": \"yyyy-mm-ddTHH:MM:SSZ\"\n}\n```\n\n\\</example\\_4>\n\n\\</example\\_5>\n**CSV Data**:\n\n```\nid | name | day_of_year | year | revenue  \n1  | sda  | 015         | 2025 | 300.0\n```\n\n**Assistant Response**:\n\n```json\n{\n  \"date_columns\": [\"day_of_year\", \"year\"],\n  \"combine_logic\": \"Ordinal date conversion\",\n  \"format\": \"ordinal-yyyy\"\n}\n```\n\n\\</example\\_5>\n\n\\</example\\_6>\n**CSV Data**:\n\n```\nWeek,TikTok Impressions,TikTok Clicks,TikTok Spend,,,,,,,,,,,,,\n07-01-2019,0,0,$0.00,,,,,,,,,,,,,\n14-01-2019,0,0,$0.00,,,,,,,,,,,,,\n21-01-2019,0,0,$0.00,,,,,,,,,,,,,\n```\n\n**Assistant Response**:\n\n```json\n{\n  \"date_columns\": [\"Week\"],\n  \"combine_logic\": \"NA\",\n  \"format\": \"dd-mm-yyyy\"\n}\n```\n\\</example\\_6>\n\n---\n\nEnsure your output is valid JSON and directly usable by downstream parsing tools. Only output the JSON block and nothing else.\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        16,
+        560
+      ],
+      "id": "4560c1e8-fba6-4504-9969-cd97c1c36a54",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "csv",
+              "type": "any"
+            }
+          ]
+        }
+      },
+      "id": "232ace08-7e0b-4db6-bd6f-5562d4516a79",
+      "typeVersion": 1.1,
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -192,
+        560
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Azure OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5f5ef059-b25d-4a8f-b02e-af9101383d1d",
+  "meta": {
+    "instanceId": "8117edbb8e82ba33550f0a7c47b8135ab8ff9a01a7cc23e98ccc0d2082d56033"
+  },
+  "id": "WzGRUrmMWjVdeyjq",
+  "tags": []
+}
